@@ -14,13 +14,17 @@ import com.fanyayun.twitterclone.fragments.HomeFragment
 import com.fanyayun.twitterclone.fragments.MyActivityFragment
 import com.fanyayun.twitterclone.fragments.SearchFragment
 import com.fanyayun.twitterclone.fragments.TwitterFragment
+import com.fanyayun.twitterclone.util.DATA_USERS
 import com.fanyayun.twitterclone.util.User
+import com.fanyayun.twitterclone.util.loadUrl
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.android.synthetic.main.activity_home.*
 
 class HomeActivity : AppCompatActivity() {
 
     private val firebaseAuth = FirebaseAuth.getInstance()
+    private val firebaseDB = FirebaseFirestore.getInstance()
     private var sectionsPagerAdapter: SectionPageAdapter? = null
     private val homeFragment = HomeFragment()
     private val searchFragment = SearchFragment()
@@ -68,6 +72,10 @@ class HomeActivity : AppCompatActivity() {
                 }
             }
         })
+
+        logo.setOnClickListener { view ->
+            startActivity(ProfileActivity.newIntent(this))
+        }
     }
 
     override fun onResume() {
@@ -77,12 +85,23 @@ class HomeActivity : AppCompatActivity() {
             startActivity(LoginActivity.newIntent(this))
             finish()
         }
+        populate()
     }
 
-    fun onLogout(v: View) {
-        firebaseAuth.signOut()
-        startActivity(LoginActivity.newIntent(this))
-        finish()
+    fun populate() {
+        homeProgressLayout.visibility = View.VISIBLE
+        firebaseDB.collection(DATA_USERS).document(userId!!).get()
+            .addOnSuccessListener { documentSnapshot ->
+                homeProgressLayout.visibility = View.GONE
+                user = documentSnapshot.toObject(User::class.java)
+                user?.imageUrl?.let {
+                    logo.loadUrl(it, R.drawable.logo)
+                }
+            }
+            .addOnFailureListener { e ->
+                e.printStackTrace()
+                finish()
+            }
     }
 
     inner class SectionPageAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm) {
